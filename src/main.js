@@ -1,6 +1,7 @@
 import { Client, Functions } from 'node-appwrite';
 
 const ASTRONOMY_FUNCTION_ID = '6781b317002a58e5064b';
+const CALENDAR_FUNCTION_ID = '67b91e390034cf42f28e';
 
 async function fetchSunAndMoonDetails({ cityTz, cityName, cityState, date }) {
   const client = new Client()
@@ -22,6 +23,35 @@ async function fetchSunAndMoonDetails({ cityTz, cityName, cityState, date }) {
 
   const execution = await functions.createExecution(
     ASTRONOMY_FUNCTION_ID,
+    '',
+    false,
+    path,
+    'GET',
+    {}
+  );
+
+  return JSON.parse(execution.responseBody);
+}
+
+async function getUpcomingCalendar({ date, tz }) {
+  const client = new Client()
+    .setEndpoint("https://fra.cloud.appwrite.io/v1")
+    .setProject(process.env.PROJECT_ID)
+    .setKey(process.env.APPWRITE_API_KEY);
+
+  const functions = new Functions(client);
+
+  const formattedDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+
+  const path = `/calendar/days?limit=3&start=${formattedDate}`;
+
+  const execution = await functions.createExecution(
+    CALENDAR_FUNCTION_ID,
     '',
     false,
     path,
@@ -57,6 +87,27 @@ export default async ({ req, res, log, error }) => {
     } catch (err) {
       error('Failed to fetch astronomy details: ' + err.message);
       return res.json({ error: 'Failed to fetch astronomy details' }, 500);
+    }
+  }
+
+  if (req.path === '/calendar') {
+    const { tz, date } = req.query;
+
+    if (!tz) {
+      return res.json({ error: 'Missing required query param: tz' }, 400);
+    }
+
+    try {
+      const days = await getUpcomingCalendar({
+        tz,
+        date: date ? new Date(date) : new Date(),
+      });
+      log(`Fetched upcoming calendar for tz=${tz} from ${date}`);
+      log(JSON.stringify(days));
+      return res.json(days);
+    } catch (err) {
+      error('Failed to fetch calendar: ' + err.message);
+      return res.json({ error: 'Failed to fetch calendar' }, 500);
     }
   }
 
