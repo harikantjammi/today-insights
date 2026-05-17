@@ -186,6 +186,7 @@ export default async ({ req, res, log, error }) => {
       log(JSON.stringify(data));
       return res.json(data);
     } catch (err) {
+      error(err)
       error('Failed to fetch panchang: ' + err.message);
       return res.json({ error: 'Failed to fetch panchang' }, 500);
     }
