@@ -63,38 +63,16 @@ async function getUpcomingCalendar({ date, tz }) {
   return JSON.parse(execution.responseBody);
 }
 
-function buildPanchangDatetime(date, tz) {
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZoneName: 'longOffset',
-  }).formatToParts(date);
-
-  const get = (type) => parts.find(p => p.type === type)?.value;
-  const hour = get('hour') === '24' ? '00' : get('hour');
-  const tzName = get('timeZoneName'); // e.g. "GMT+05:30" or "GMT"
-
-  const offsetMatch = tzName?.match(/GMT([+-]\d{2}:\d{2})/);
-  const offset = offsetMatch ? offsetMatch[1] : '+00:00';
-
-  const datePart = `${get('year')}-${get('month')}-${get('day')}`;
-  const timePart = `${hour}:${get('minute')}:${get('second')}${offset}`;
-
+function buildPanchangDatetime(isoDate) {
+  const [datePart, timePart] = isoDate.split('T');
   const encodedTime = timePart
     .replace(/:/g, '%3A')
     .replace(/\+/g, '%2B')
     .replace(/-/g, '%2D');
-
   return { date: datePart, datetime: `${datePart}T${encodedTime}` };
 }
 
-async function getPanchang({ tz, longitude, latitude, date }) {
+async function getPanchang({ longitude, latitude, date }) {
   const client = new Client()
     .setEndpoint("https://fra.cloud.appwrite.io/v1")
     .setProject(process.env.PROJECT_ID)
@@ -102,7 +80,7 @@ async function getPanchang({ tz, longitude, latitude, date }) {
 
   const functions = new Functions(client);
 
-  const { date: formattedDate, datetime } = buildPanchangDatetime(date, tz);
+  const { date: formattedDate, datetime } = buildPanchangDatetime(date);
 
   // params sorted alphabetically: ayanamsa, calendar, date, datetime, la, latitude, longitude
   const path = `/today?ayanamsa=1&calendar=shaka-samvat&date=${formattedDate}&datetime=${datetime}&la=en&latitude=${latitude}&longitude=${longitude}`;
@@ -169,20 +147,19 @@ export default async ({ req, res, log, error }) => {
   }
 
   if (req.path === '/panchang') {
-    const { tz, date, longitude, latitude } = req.query;
+    const { date, longitude, latitude } = req.query;
 
-    if (!tz || !date || !longitude || !latitude) {
-      return res.json({ error: 'Missing required query params: tz, date, longitude, latitude' }, 400);
+    if (!date || !longitude || !latitude) {
+      return res.json({ error: 'Missing required query params: date, latitude, longitude' }, 400);
     }
 
     try {
       const data = await getPanchang({
-        tz,
         longitude,
         latitude,
-        date: new Date(date),
+        date,
       });
-      log(`Fetched panchang for tz=${tz} on ${date}`);
+      log(`Fetched panchang for ${date}`);
       log(JSON.stringify(data));
       return res.json(data);
     } catch (err) {
