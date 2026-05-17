@@ -13,7 +13,7 @@ async function fetchSunAndMoonDetails({ cityName, cityState, dateStr }) {
   const functions = new Functions(client);
 
   const city = encodeURIComponent(`${cityName} ${cityState}`);
-  const path = `/astronomy?date=${formattedDate}&city=${city}`;
+  const path = `/astronomy?date=${dateStr}&city=${city}`;
 
   const execution = await functions.createExecution(
     ASTRONOMY_FUNCTION_ID,
