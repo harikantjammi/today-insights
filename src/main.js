@@ -4,20 +4,13 @@ const ASTRONOMY_FUNCTION_ID = '6781b317002a58e5064b';
 const CALENDAR_FUNCTION_ID = '67b91e390034cf42f28e';
 const PANCHANG_FUNCTION_ID = '6788e8bf000f944e2335';
 
-async function fetchSunAndMoonDetails({ cityTz, cityName, cityState, date }) {
+async function fetchSunAndMoonDetails({ cityName, cityState, dateStr }) {
   const client = new Client()
     .setEndpoint("https://fra.cloud.appwrite.io/v1")
     .setProject(process.env.PROJECT_ID)
     .setKey(process.env.APPWRITE_API_KEY);
 
   const functions = new Functions(client);
-
-  const formattedDate = new Intl.DateTimeFormat('en-CA', {
-    timeZone: cityTz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
 
   const city = encodeURIComponent(`${cityName} ${cityState}`);
   const path = `/astronomy?date=${formattedDate}&city=${city}`;
@@ -34,7 +27,7 @@ async function fetchSunAndMoonDetails({ cityTz, cityName, cityState, date }) {
   return JSON.parse(execution.responseBody);
 }
 
-async function getUpcomingCalendar({ date, tz }) {
+async function getUpcomingCalendar({ dateStr }) {
   const client = new Client()
     .setEndpoint("https://fra.cloud.appwrite.io/v1")
     .setProject(process.env.PROJECT_ID)
@@ -42,14 +35,7 @@ async function getUpcomingCalendar({ date, tz }) {
 
   const functions = new Functions(client);
 
-  const formattedDate = new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-
-  const path = `/calendar/days?limit=3&start=${formattedDate}`;
+  const path = `/calendar/days?limit=3&start=${dateStr}`;
 
   const execution = await functions.createExecution(
     CALENDAR_FUNCTION_ID,
@@ -114,11 +100,17 @@ export default async ({ req, res, log, error }) => {
     }
 
     try {
+      const dateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(date ? new Date(date) : new Date());
+
       const details = await fetchSunAndMoonDetails({
-        cityTz: tz,
         cityName: city,
         cityState: state,
-        date: date ? new Date(date) : new Date(),
+        dateStr,
       });
       log(`Fetched astronomy details for ${city}, ${state} on ${date}`);
       log(JSON.stringify(details));
@@ -137,10 +129,14 @@ export default async ({ req, res, log, error }) => {
     }
 
     try {
-      const days = await getUpcomingCalendar({
-        tz,
-        date: date ? new Date(date) : new Date(),
-      });
+      const dateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(date ? new Date(date) : new Date());
+
+      const days = await getUpcomingCalendar({ dateStr });
       log(`Fetched upcoming calendar for tz=${tz} from ${date}`);
       log(JSON.stringify(days));
       return res.json(days);
@@ -180,12 +176,12 @@ export default async ({ req, res, log, error }) => {
       return res.json({ error: 'Missing required query params: city, date, latitude, longitude, state, tz' }, 400);
     }
 
-    const dateObj = new Date(date);
+    const [dateStr] = date.split('T');
 
     const [astronomyResult, panchangResult, calendarResult] = await Promise.allSettled([
-      fetchSunAndMoonDetails({ cityTz: tz, cityName: city, cityState: state, date: dateObj }),
+      fetchSunAndMoonDetails({ cityTz: tz, cityName: city, cityState: state, dateStr }),
       getPanchang({ longitude, latitude, date }),
-      getUpcomingCalendar({ tz, date: dateObj }),
+      getUpcomingCalendar({ dateStr }),
     ]);
 
     const toValue = (result) =>
