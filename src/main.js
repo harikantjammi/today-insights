@@ -1,35 +1,63 @@
-import { Client, Users } from 'node-appwrite';
+import { Client, Functions } from 'node-appwrite';
 
-// This Appwrite function will be executed every time your function is triggered
-export default async ({ req, res, log, error }) => {
-  // You can use the Appwrite SDK to interact with other services
-  // For this example, we're using the Users service
+const ASTRONOMY_FUNCTION_ID = '6781b317002a58e5064b';
+
+async function fetchSunAndMoonDetails({ cityTz, cityName, cityState, date }) {
   const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_API_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(req.headers['x-appwrite-key'] ?? '');
-  const users = new Users(client);
+    .setEndpoint("https://fra.cloud.appwrite.io/v1")
+    .setProject(process.env.PROJECT_ID)
+    .setKey(process.env.APPWRITE_API_KEY);
 
-  try {
-    const response = await users.list();
-    // Log messages and errors to the Appwrite Console
-    // These logs won't be seen by your end users
-    log(`Total users: ${response.total}`);
-  } catch(err) {
-    error("Could not list users: " + err.message);
+  const functions = new Functions(client);
+
+  const formattedDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: cityTz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+
+  const city = encodeURIComponent(`${cityName} ${cityState}`);
+  const path = `/astronomy?date=${formattedDate}&city=${city}`;
+
+  const execution = await functions.createExecution(
+    ASTRONOMY_FUNCTION_ID,
+    '',
+    false,
+    path,
+    'GET',
+    {}
+  );
+
+  return JSON.parse(execution.responseBody);
+}
+
+export default async ({ req, res, log, error }) => {
+  if (req.path === '/ping') {
+    return res.text('Pong');
   }
 
-  // The req object contains the request data
-  if (req.path === "/ping") {
-    // Use res object to respond with text(), json(), or binary()
-    // Don't forget to return a response!
-    return res.text("Pong");
+  if (req.path === '/astronomy') {
+    const { tz, city, state, date } = req.query;
+
+    if (!tz || !city || !state) {
+      return res.json({ error: 'Missing required query params: tz, city, state' }, 400);
+    }
+
+    try {
+      const details = await fetchSunAndMoonDetails({
+        cityTz: tz,
+        cityName: city,
+        cityState: state,
+        date: date ? new Date(date) : new Date(),
+      });
+      log(`Fetched astronomy details for ${city}, ${state} on ${date}`);
+      return res.json(details);
+    } catch (err) {
+      error('Failed to fetch astronomy details: ' + err.message);
+      return res.json({ error: 'Failed to fetch astronomy details' }, 500);
+    }
   }
 
-  return res.json({
-    motto: "Build like a team of hundreds_",
-    learn: "https://appwrite.io/docs",
-    connect: "https://appwrite.io/discord",
-    getInspired: "https://builtwith.appwrite.io",
-  });
+  return res.json({ error: 'Not found' }, 404);
 };
