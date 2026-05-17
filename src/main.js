@@ -173,5 +173,34 @@ export default async ({ req, res, log, error }) => {
     }
   }
 
+  if (req.path === '/today-insights') {
+    const { city, date, latitude, longitude, state, tz } = req.query;
+
+    if (!city || !date || !latitude || !longitude || !state || !tz) {
+      return res.json({ error: 'Missing required query params: city, date, latitude, longitude, state, tz' }, 400);
+    }
+
+    const dateObj = new Date(date);
+
+    const [astronomyResult, panchangResult, calendarResult] = await Promise.allSettled([
+      fetchSunAndMoonDetails({ cityTz: tz, cityName: city, cityState: state, date: dateObj }),
+      getPanchang({ longitude, latitude, date }),
+      getUpcomingCalendar({ tz, date: dateObj }),
+    ]);
+
+    const toValue = (result) =>
+      result.status === 'fulfilled' ? result.value : { error: result.reason?.message };
+
+    const response = {
+      astronomy: toValue(astronomyResult),
+      calendar: toValue(calendarResult),
+      panchang: toValue(panchangResult),
+    };
+
+    log(`Fetched today-insights for ${city}, ${state} on ${date}`);
+    log(JSON.stringify(response));
+    return res.json(response);
+  }
+
   return res.json({ error: 'Not found' }, 404);
 };
