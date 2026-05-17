@@ -82,8 +82,12 @@ async function getPanchang({ longitude, latitude, date }) {
 
   const { date: formattedDate, datetime } = buildPanchangDatetime(date);
 
-  // params sorted alphabetically: ayanamsa, calendar, date, datetime, la, latitude, longitude
-  const path = `/today?ayanamsa=1&calendar=shaka-samvat&date=${formattedDate}&datetime=${datetime}&la=en&latitude=${latitude}&longitude=${longitude}`;
+  const lon = parseFloat(longitude);
+  const longitudeStr = lon < 0 ? `%2D${Math.abs(lon)}` : `${lon}`;
+  const coordinates = `${latitude}%2C${longitudeStr}`;
+
+  // params sorted alphabetically: ayanamsa, calendar, coordinates, date, datetime, la
+  const path = `/today?ayanamsa=1&calendar=shaka-samvat&coordinates=${coordinates}&date=${formattedDate}&datetime=${datetime}&la=en`;
 
   const execution = await functions.createExecution(
     PANCHANG_FUNCTION_ID,
