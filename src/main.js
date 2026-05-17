@@ -52,6 +52,7 @@ export default async ({ req, res, log, error }) => {
         date: date ? new Date(date) : new Date(),
       });
       log(`Fetched astronomy details for ${city}, ${state} on ${date}`);
+      log(JSON.stringify(details));
       return res.json(details);
     } catch (err) {
       error('Failed to fetch astronomy details: ' + err.message);
