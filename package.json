@@ -8,6 +8,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "node-appwrite": "^20.2.1"
   },
   "devDependencies": {

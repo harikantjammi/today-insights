@@ -1,4 +1,71 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { Client, Functions } from 'node-appwrite';
+
+const anthropic = new Anthropic();
+
+async function summarizeInsights(data) {
+  const stream = anthropic.messages.stream({
+    model: 'claude-opus-4-7',
+    max_tokens: 1024,
+    thinking: { type: 'disabled' },
+    system: [
+      {
+        type: 'text',
+        text: `You are a helpful assistant that summarizes daily astronomical, panchang, and calendar insights.
+
+Rules:
+- Base every statement strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
+- If a field is missing, null, or contains an error, do not guess its value — omit it from the summary entirely.
+- Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
+- The dayRating must be derived solely from the combination of fields present in the input (e.g. auspicious periods, festival names, tithi, moon phase, planetary positions). If the data is insufficient to determine a rating, use "neutral".
+- Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    output_config: {
+      effort: 'low',
+      format: {
+        type: 'json_schema',
+        name: 'insights_summary',
+        schema: {
+          type: 'object',
+          properties: {
+            briefSummary: {
+              type: 'string',
+              description: 'A 1-2 sentence overview of the day.',
+            },
+            detailedSummary: {
+              type: 'string',
+              description: 'A paragraph covering key astronomy details, panchang tithi/nakshatra, and upcoming calendar events.',
+            },
+            keyInsights: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Notable highlights such as sunrise/sunset times, tithi, festivals, and auspicious periods.',
+            },
+            dayRating: {
+              type: 'string',
+              enum: ['excellent', 'good', 'neutral', 'bad'],
+              description: 'Overall rating of the day based on astrological and calendar factors.',
+            },
+          },
+          required: ['briefSummary', 'detailedSummary', 'keyInsights', 'dayRating'],
+          additionalProperties: false,
+        },
+      },
+    },
+    messages: [
+      {
+        role: 'user',
+        content: `Summarize today's insights:\n\n${JSON.stringify(data)}`,
+      },
+    ],
+  });
+
+  const message = await stream.finalMessage();
+  const text = message.content.find((b) => b.type === 'text')?.text;
+  return JSON.parse(text);
+}
 
 const ASTRONOMY_FUNCTION_ID = '6781b317002a58e5064b';
 const CALENDAR_FUNCTION_ID = '67b91e390034cf42f28e';
@@ -115,6 +182,13 @@ export default async ({ req, res, log, error }) => {
       calendar: toValue(calendarResult),
       panchang: toValue(panchangResult),
     };
+
+    try {
+      response.summary = await summarizeInsights(response);
+    } catch (err) {
+      error('Failed to summarize insights: ' + err.message);
+      response.summary = { error: err.message };
+    }
 
     log(`Fetched today-insights for ${city}, ${state} on ${date}`);
     log(JSON.stringify(response));
