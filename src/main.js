@@ -26,7 +26,6 @@ Rules:
       effort: 'low',
       format: {
         type: 'json_schema',
-        name: 'insights_summary',
         schema: {
           type: 'object',
           properties: {
