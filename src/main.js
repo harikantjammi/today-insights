@@ -23,7 +23,7 @@ Rules:
       },
     ],
     output_config: {
-      effort: 'low',
+      effort: 'medium',
       format: {
         type: 'json_schema',
         schema: {
@@ -45,7 +45,7 @@ Rules:
             dayRating: {
               type: 'string',
               enum: ['excellent', 'good', 'neutral', 'bad'],
-              description: 'Overall rating of the day based on astrological and calendar factors.',
+              description: 'Overall rating of the day. Use "excellent" if multiple auspicious muhurats, a significant festival, and favorable tithi/yoga are all present with few inauspicious periods. Use "good" if there are auspicious muhurats or a festival with only minor inauspicious periods. Use "neutral" if auspicious and inauspicious factors are roughly balanced or data is insufficient. Use "bad" if inauspicious periods (Rahu Kaal, Vishti Karana, negative yoga) dominate with no significant auspicious offsets.',
             },
             recommendations: {
               type: 'array',
