@@ -3,10 +3,45 @@ import { Client, Functions } from 'node-appwrite';
 
 const anthropic = new Anthropic();
 
+function trimForSummarization({ astronomy, calendar, panchang }) {
+  const astro = astronomy?.astronomy?.astro;
+  const trimmedAstronomy = astro
+    ? {
+        sunrise: astro.sunrise,
+        sunset: astro.sunset,
+        moonrise: astro.moonrise,
+        moonset: astro.moonset,
+        moon_phase: astro.moon_phase,
+        moon_illumination: astro.moon_illumination,
+      }
+    : astronomy;
+
+  const pd = panchang?.data?.panchang?.data;
+  const trimmedPanchang = pd
+    ? {
+        vaara: pd.vaara,
+        nakshatra: pd.nakshatra?.map(({ name, lord, start, end }) => ({
+          name,
+          lord: { name: lord?.name, vedic_name: lord?.vedic_name },
+          start,
+          end,
+        })),
+        tithi: pd.tithi?.map(({ name, paksha, start, end }) => ({ name, paksha, start, end })),
+        karana: pd.karana?.map(({ name, start, end }) => ({ name, start, end })),
+        yoga: pd.yoga?.map(({ name, start, end }) => ({ name, start, end })),
+        auspicious_period: pd.auspicious_period?.map(({ name, period }) => ({ name, period })),
+        inauspicious_period: pd.inauspicious_period?.map(({ name, period }) => ({ name, period })),
+      }
+    : panchang;
+
+  return { astronomy: trimmedAstronomy, calendar, panchang: trimmedPanchang };
+}
+
 async function summarizeInsights(data) {
+  const trimmed = trimForSummarization(data);
   const stream = anthropic.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     thinking: { type: 'adaptive' },
     system: [
       {
@@ -61,7 +96,7 @@ Rules:
     messages: [
       {
         role: 'user',
-        content: `Summarize today's insights:\n\n${JSON.stringify(data)}`,
+        content: `Summarize today's insights:\n\n${JSON.stringify(trimmed)}`,
       },
     ],
   });
