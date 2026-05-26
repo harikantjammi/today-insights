@@ -5,8 +5,8 @@ const anthropic = new Anthropic();
 
 async function summarizeInsights(data) {
   const stream = anthropic.messages.stream({
-    model: 'claude-opus-4-7',
-    max_tokens: 4096,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
     thinking: { type: 'adaptive' },
     system: [
       {
