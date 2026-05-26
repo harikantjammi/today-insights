@@ -41,7 +41,7 @@ async function summarizeInsights(data) {
   const trimmed = trimForSummarization(data);
   const stream = anthropic.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 1024,
     thinking: { type: 'adaptive' },
     system: [
       {
