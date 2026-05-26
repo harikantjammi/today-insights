@@ -40,9 +40,8 @@ function trimForSummarization({ astronomy, calendar, panchang }) {
 async function summarizeInsights(data) {
   const trimmed = trimForSummarization(data);
   const stream = anthropic.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    thinking: { type: 'adaptive' },
+    model: 'claude-haiku-4-5',
+    max_tokens: 1024,
     system: [
       {
         type: 'text',
@@ -52,13 +51,11 @@ Rules:
 - Base every statement strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
 - If a field is missing, null, or contains an error, do not guess its value — omit it from the summary entirely.
 - Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
-- The dayRating must be derived solely from the combination of fields present in the input (e.g. auspicious periods, festival names, tithi, moon phase, planetary positions). If the data is insufficient to determine a rating, use "neutral".
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
         cache_control: { type: 'ephemeral' },
       },
     ],
     output_config: {
-      effort: 'medium',
       format: {
         type: 'json_schema',
         schema: {
@@ -80,7 +77,7 @@ Rules:
             dayRating: {
               type: 'string',
               enum: ['excellent', 'good', 'neutral', 'bad'],
-              description: 'Overall rating of the day. Use "excellent" if multiple auspicious muhurats, a significant festival, and favorable tithi/yoga are all present with few inauspicious periods. Use "good" if there are auspicious muhurats or a festival with only minor inauspicious periods. Use "neutral" if auspicious and inauspicious factors are roughly balanced or data is insufficient. Use "bad" if inauspicious periods (Rahu Kaal, Vishti Karana, negative yoga) dominate with no significant auspicious offsets.',
+              description: 'Rate the day using only the calendar[0].festival field and panchang data. Use "excellent" if today has more than one festival (multiple names in the festival field). Use "good" if today has exactly one festival, or if there are auspicious muhurats/favorable panchang with no dominant inauspicious periods. Use "neutral" if there are no festivals and auspicious/inauspicious factors are balanced. Use "bad" if inauspicious periods dominate with no festivals.',
             },
             recommendations: {
               type: 'array',
