@@ -51,6 +51,10 @@ Rules:
 - Base every statement strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
 - If a field is missing, null, or contains an error, do not guess its value — omit it from the summary entirely.
 - Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
+- For recommendations: only generate festival-based recommendations for Hindu festivals. Ignore all non-Hindu festivals (e.g. Christmas, Easter, Eid, etc.).
+- Do NOT include recommendations about upcoming holidays or future dates — only today.
+- If today has a Hindu festival, you may add a recommendation relevant to that festival.
+- Each recommendation must have a "text" field and a "type" field indicating the nature of the recommendation.
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
         cache_control: { type: 'ephemeral' },
       },
@@ -61,31 +65,33 @@ Rules:
         schema: {
           type: 'object',
           properties: {
-            briefSummary: {
-              type: 'string',
-              description: 'A 1-2 sentence overview of the day.',
-            },
-            detailedSummary: {
-              type: 'string',
-              description: 'A paragraph covering key astronomy details, panchang tithi/nakshatra, and upcoming calendar events.',
-            },
-            keyInsights: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Notable highlights such as sunrise/sunset times, tithi, festivals, and auspicious periods.',
-            },
             dayRating: {
               type: 'string',
               enum: ['excellent', 'good', 'neutral', 'bad'],
-              description: 'Rate the day using only the calendar[0].festival field and panchang data. Use "excellent" if today has more than one festival (multiple names in the festival field). Use "good" if today has exactly one festival, or if there are auspicious muhurats/favorable panchang with no dominant inauspicious periods. Use "neutral" if there are no festivals and auspicious/inauspicious factors are balanced. Use "bad" if inauspicious periods dominate with no festivals.',
+              description: 'Rate the day using only the calendar[0].festival field (Hindu festivals only) and panchang data. Use "excellent" if today has more than one Hindu festival. Use "good" if today has exactly one Hindu festival, or if there are auspicious muhurats/favorable panchang with no dominant inauspicious periods. Use "neutral" if there are no festivals and auspicious/inauspicious factors are balanced. Use "bad" if inauspicious periods dominate with no festivals.',
             },
             recommendations: {
               type: 'array',
-              items: { type: 'string' },
-              description: 'General recommendations for the day based strictly on the data provided (e.g. good time for certain activities, things to be mindful of).',
+              items: {
+                type: 'object',
+                properties: {
+                  text: {
+                    type: 'string',
+                    description: 'The recommendation text.',
+                  },
+                  type: {
+                    type: 'string',
+                    enum: ['do', 'avoid', 'warning', 'info', 'festival'],
+                    description: 'Type of recommendation: "do" for suggested actions, "avoid" for things to skip, "warning" for cautions, "info" for neutral observations, "festival" for Hindu festival-specific guidance.',
+                  },
+                },
+                required: ['text', 'type'],
+                additionalProperties: false,
+              },
+              description: 'Recommendations for today only, based strictly on panchang and today\'s Hindu festivals. Do not include upcoming holidays or future dates.',
             },
           },
-          required: ['briefSummary', 'detailedSummary', 'keyInsights', 'dayRating', 'recommendations'],
+          required: ['dayRating', 'recommendations'],
           additionalProperties: false,
         },
       },
