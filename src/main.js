@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Client, Functions } from 'node-appwrite';
+import { Client, Databases, Functions, ID, Query } from 'node-appwrite';
 
 const anthropic = new Anthropic();
 
@@ -196,6 +196,43 @@ async function getPanchang({ longitude, latitude, date }) {
   return JSON.parse(execution.responseBody);
 }
 
+function makeAppwriteClient() {
+  return new Client()
+    .setEndpoint('https://fra.cloud.appwrite.io/v1')
+    .setProject(process.env.PROJECT_ID)
+    .setKey(process.env.APPWRITE_API_KEY);
+}
+
+async function lookupCache({ city, dateStr, latitude, longitude, state, tz }) {
+  const db = new Databases(makeAppwriteClient());
+  const result = await db.listDocuments(
+    process.env.DATABASE_ID,
+    process.env.INSIGHTS_STORE,
+    [
+      Query.equal('city', city),
+      Query.equal('date', dateStr),
+      Query.equal('latitude', latitude),
+      Query.equal('longitude', longitude),
+      Query.equal('state', state),
+      Query.equal('tz', tz),
+    ]
+  );
+  if (result.documents.length > 0) {
+    return JSON.parse(result.documents[0].response);
+  }
+  return null;
+}
+
+async function saveCache({ city, dateStr, latitude, longitude, state, tz, response }) {
+  const db = new Databases(makeAppwriteClient());
+  await db.createDocument(
+    process.env.DATABASE_ID,
+    process.env.INSIGHTS_STORE,
+    ID.unique(),
+    { city, date: dateStr, latitude, longitude, state, tz, response: JSON.stringify(response) }
+  );
+}
+
 export default async ({ req, res, log, error }) => {
   if (req.path === '/ping') {
     return res.text('Pong');
@@ -209,6 +246,12 @@ export default async ({ req, res, log, error }) => {
     }
 
     const [dateStr] = date.split('T');
+
+    const cached = await lookupCache({ city, dateStr, latitude, longitude, state, tz });
+    if (cached) {
+      log(`Cache hit for ${city}, ${state} on ${dateStr}`);
+      return res.json(cached);
+    }
 
     const [astronomyResult, panchangResult, calendarResult] = await Promise.allSettled([
       fetchSunAndMoonDetails({ cityTz: tz, cityName: city, cityState: state, dateStr }),
@@ -232,8 +275,16 @@ export default async ({ req, res, log, error }) => {
       response.summary = { error: err.message };
     }
 
+    if (!response.summary?.error) {
+      try {
+        await saveCache({ city, dateStr, latitude, longitude, state, tz, response });
+        log(`Cached insights for ${city}, ${state} on ${dateStr}`);
+      } catch (err) {
+        error('Failed to cache insights: ' + err.message);
+      }
+    }
+
     log(`Fetched today-insights for ${city}, ${state} on ${date}`);
-    log(JSON.stringify(response));
     return res.json(response);
   }
 
