@@ -177,9 +177,11 @@ async function getPanchang({ longitude, latitude, date }) {
 
   const { date: formattedDate, datetime } = buildPanchangDatetime(date);
 
+  const lat = parseFloat(latitude);
   const lon = parseFloat(longitude);
+  const latitudeStr = lat < 0 ? `%2D${Math.abs(lat)}` : `${lat}`;
   const longitudeStr = lon < 0 ? `%2D${Math.abs(lon)}` : `${lon}`;
-  const coordinates = `${latitude}%2C${longitudeStr}`;
+  const coordinates = `${latitudeStr}%2C${longitudeStr}`;
 
   // params sorted alphabetically: ayanamsa, calendar, coordinates, date, datetime, la
   const path = `/today?ayanamsa=1&calendar=shaka-samvat&coordinates=${coordinates}&date=${formattedDate}&datetime=${datetime}&la=en`;
@@ -286,7 +288,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     log(`Fetched today-insights for ${city}, ${state} on ${date}`);
-    return res.json(response);
+    return res.json(response.summary);
   }
 
   return res.json({ error: 'Not found' }, 404);
