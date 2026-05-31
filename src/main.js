@@ -223,13 +223,13 @@ async function lookupCache({ city, dateStr, latitude, longitude, state, tz }) {
   return null;
 }
 
-async function saveCache({ city, dateStr, latitude, longitude, state, tz, response }) {
+async function saveCache({ city, dateStr, latitude, longitude, state, tz, summary }) {
   const db = new Databases(makeAppwriteClient());
   await db.createDocument(
     process.env.DATABASE_ID,
     process.env.INSIGHTS_STORE,
     ID.unique(),
-    { city, date: dateStr, latitude, longitude, state, tz, response: JSON.stringify(response) }
+    { city, date: dateStr, latitude, longitude, state, tz, response: JSON.stringify(summary) }
   );
 }
 
@@ -247,11 +247,7 @@ export default async ({ req, res, log, error }) => {
 
     const [dateStr] = date.split('T');
 
-    const cached = await lookupCache({ city, dateStr, latitude, longitude, state, tz });
-    if (cached) {
-      log(`Cache hit for ${city}, ${state} on ${dateStr}`);
-      return res.json(cached);
-    }
+    const cachedSummary = await lookupCache({ city, dateStr, latitude, longitude, state, tz });
 
     const [astronomyResult, panchangResult, calendarResult] = await Promise.allSettled([
       fetchSunAndMoonDetails({ cityTz: tz, cityName: city, cityState: state, dateStr }),
@@ -268,19 +264,24 @@ export default async ({ req, res, log, error }) => {
       panchang: toValue(panchangResult),
     };
 
-    try {
-      response.summary = await summarizeInsights(response);
-    } catch (err) {
-      error('Failed to summarize insights: ' + err.message);
-      response.summary = { error: err.message };
-    }
-
-    if (!response.summary?.error) {
+    if (cachedSummary) {
+      log(`Cache hit for ${city}, ${state} on ${dateStr}`);
+      response.summary = cachedSummary;
+    } else {
       try {
-        await saveCache({ city, dateStr, latitude, longitude, state, tz, response });
-        log(`Cached insights for ${city}, ${state} on ${dateStr}`);
+        response.summary = await summarizeInsights(response);
       } catch (err) {
-        error('Failed to cache insights: ' + err.message);
+        error('Failed to summarize insights: ' + err.message);
+        response.summary = { error: err.message };
+      }
+
+      if (!response.summary?.error) {
+        try {
+          await saveCache({ city, dateStr, latitude, longitude, state, tz, summary: response.summary });
+          log(`Cached summary for ${city}, ${state} on ${dateStr}`);
+        } catch (err) {
+          error('Failed to cache insights: ' + err.message);
+        }
       }
     }
 
