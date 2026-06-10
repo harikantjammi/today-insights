@@ -92,7 +92,8 @@ Rules:
 }
 
 export async function summarizePanchangInsights(panchang) {
-  const trimmed = { panchang: trimPanchang(panchang) };
+  const { auspicious_period, inauspicious_period, ...panchangForSummary } = trimPanchang(panchang) ?? {};
+  const trimmed = { panchang: panchangForSummary };
   const stream = anthropic.messages.stream({
     model: 'claude-haiku-4-5',
     max_tokens: 1024,
@@ -105,6 +106,8 @@ Rules:
 - Base every statement strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
 - If a field is missing, null, or contains an error, do not guess its value — omit it from the summary entirely.
 - Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
+- Whenever a time appears in the summary or recommendations, format it in 12-hour AM/PM format (e.g. "6:05 AM"), never 24-hour or ISO format.
+- Do not include any muhurat-related information (auspicious or inauspicious periods) in the summary or recommendations.
 - The summary must cover each of tithi, vaara, nakshatra, yoga, and karana based on the input data.
 - Each recommendation must be tied to one of tithi, vaara, nakshatra, yoga, or karana via the "component" field, and have a "text" field and a "type" field indicating the nature of the recommendation.
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
