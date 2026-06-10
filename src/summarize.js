@@ -103,13 +103,13 @@ export async function summarizePanchangInsights(panchang) {
         text: `You are a helpful assistant that summarizes daily panchang insights.
 
 Rules:
-- Base every statement strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
+- Base every statement about today strictly on the values present in the input JSON. Do not infer, assume, or add information that is not explicitly in the data.
 - If a field is missing, null, or contains an error, do not guess its value — omit it from the summary entirely.
-- Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
+- Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data, except in the "information" field, which may include general, well-known introductory context about what the component is.
 - Whenever a time appears in the summary or recommendations, format it in 12-hour AM/PM format (e.g. "6:05 AM"), never 24-hour or ISO format.
 - Do not include any muhurat-related information (auspicious or inauspicious periods) in the summary or recommendations.
 - The output must cover each of tithi, vaara, nakshatra, yoga, and karana based on the input data.
-- For each component, provide "information" (factual details about today's value, e.g. name, lord, start and end times in 12-hour AM/PM format), a "summary" (what it means for the day), and "recommendations" (a list of "text"/"type" entries, or an empty array if there are none).
+- For each component, provide "information" (a brief, general introduction to what this component is and what it represents, independent of today's specific values), a "summary" (what today's specific value of this component means for the day, based on the input data), and "recommendations" (a list of "text"/"type" entries, or an empty array if there are none).
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
         cache_control: { type: 'ephemeral' },
       },
@@ -127,7 +127,7 @@ Rules:
                 properties: {
                   information: {
                     type: 'string',
-                    description: `Factual information about today's ${component} based on the input data.`,
+                    description: `A brief, general introduction explaining what ${component} is and its significance in the panchang, independent of today's specific values.`,
                   },
                   summary: {
                     type: 'string',
