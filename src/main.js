@@ -100,6 +100,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     log(`Fetched panchang-insights for ${city}, ${state} on ${date}`);
+    log(JSON.stringify(summary));
     return res.json(summary);
   }
 
