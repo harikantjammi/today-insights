@@ -108,8 +108,8 @@ Rules:
 - Do not reference cultural, religious, or astrological beliefs beyond what is directly stated in the input data.
 - Whenever a time appears in the summary or recommendations, format it in 12-hour AM/PM format (e.g. "6:05 AM"), never 24-hour or ISO format.
 - Do not include any muhurat-related information (auspicious or inauspicious periods) in the summary or recommendations.
-- The summary must cover each of tithi, vaara, nakshatra, yoga, and karana based on the input data.
-- Each recommendation must be tied to one of tithi, vaara, nakshatra, yoga, or karana via the "component" field, and have a "text" field and a "type" field indicating the nature of the recommendation.
+- The output must cover each of tithi, vaara, nakshatra, yoga, and karana based on the input data.
+- For each component, provide "information" (factual details about today's value, e.g. name, lord, start and end times in 12-hour AM/PM format), a "summary" (what it means for the day), and "recommendations" (a list of "text"/"type" entries, or an empty array if there are none).
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
         cache_control: { type: 'ephemeral' },
       },
@@ -119,61 +119,47 @@ Rules:
         type: 'json_schema',
         schema: {
           type: 'object',
-          properties: {
-            summary: {
-              type: 'object',
-              properties: {
-                tithi: {
-                  type: 'string',
-                  description: 'Short summary of today\'s tithi based on the input data.',
-                },
-                vaara: {
-                  type: 'string',
-                  description: 'Short summary of today\'s vaara (weekday) based on the input data.',
-                },
-                nakshatra: {
-                  type: 'string',
-                  description: 'Short summary of today\'s nakshatra(s) based on the input data.',
-                },
-                yoga: {
-                  type: 'string',
-                  description: 'Short summary of today\'s yoga(s) based on the input data.',
-                },
-                karana: {
-                  type: 'string',
-                  description: 'Short summary of today\'s karana(s) based on the input data.',
-                },
-              },
-              required: ['tithi', 'vaara', 'nakshatra', 'yoga', 'karana'],
-              additionalProperties: false,
-            },
-            recommendations: {
-              type: 'array',
-              items: {
+          properties: Object.fromEntries(
+            ['tithi', 'vaara', 'nakshatra', 'yoga', 'karana'].map((component) => [
+              component,
+              {
                 type: 'object',
                 properties: {
-                  component: {
+                  information: {
                     type: 'string',
-                    enum: ['tithi', 'vaara', 'nakshatra', 'yoga', 'karana'],
-                    description: 'The panchang component this recommendation relates to.',
+                    description: `Factual information about today's ${component} based on the input data.`,
                   },
-                  text: {
+                  summary: {
                     type: 'string',
-                    description: 'A short description of the recommendation.',
+                    description: `Summary of what today's ${component} means for the day.`,
                   },
-                  type: {
-                    type: 'string',
-                    enum: ['do', 'avoid', 'warning', 'info'],
-                    description: 'Type of recommendation: "do" for suggested actions, "avoid" for things to skip, "warning" for cautions, "info" for neutral observations.',
+                  recommendations: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        text: {
+                          type: 'string',
+                          description: 'A short description of the recommendation.',
+                        },
+                        type: {
+                          type: 'string',
+                          enum: ['do', 'avoid', 'warning', 'info'],
+                          description: 'Type of recommendation: "do" for suggested actions, "avoid" for things to skip, "warning" for cautions, "info" for neutral observations.',
+                        },
+                      },
+                      required: ['text', 'type'],
+                      additionalProperties: false,
+                    },
+                    description: `Recommendations for today related to ${component}, based strictly on the panchang data. Empty array if there are none.`,
                   },
                 },
-                required: ['component', 'text', 'type'],
+                required: ['information', 'summary', 'recommendations'],
                 additionalProperties: false,
               },
-              description: 'Recommendations for today, each tied to a specific panchang component (tithi, vaara, nakshatra, yoga, or karana) and based strictly on the panchang data.',
-            },
-          },
-          required: ['summary', 'recommendations'],
+            ])
+          ),
+          required: ['tithi', 'vaara', 'nakshatra', 'yoga', 'karana'],
           additionalProperties: false,
         },
       },
