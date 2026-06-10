@@ -96,7 +96,7 @@ export async function summarizePanchangInsights(panchang) {
   const trimmed = { panchang: panchangForSummary };
   const stream = anthropic.messages.stream({
     model: 'claude-haiku-4-5',
-    max_tokens: 4096,
+    max_tokens: 2048,
     system: [
       {
         type: 'text',
