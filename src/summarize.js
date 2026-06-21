@@ -175,5 +175,6 @@ Rules:
 
   const message = await stream.finalMessage();
   const text = message.content.find((b) => b.type === 'text')?.text;
-  return JSON.parse(text);
+  const recommendations = JSON.parse(text);
+  return { panchang: panchangForSummary, recommendations };
 }
