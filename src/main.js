@@ -8,18 +8,18 @@ export default async ({ req, res, log, error }) => {
   }
 
   if (req.path === '/panchang-insights') {
-    const { city, date, latitude, longitude, state, tz } = req.query;
+    const { date, latitude, longitude } = req.query;
 
-    if (!city || !date || !latitude || !longitude || !state || !tz) {
-      return res.json({ error: 'Missing required query params: city, date, latitude, longitude, state, tz' }, 400);
+    if (!date || !latitude || !longitude) {
+      return res.json({ error: 'Missing required query params: date, latitude, longitude' }, 400);
     }
 
     const [dateStr] = date.split('T');
 
-    const cachedSummary = await lookupCache({ documentType: 'panchang-insights', city, dateStr, latitude, longitude, state, tz });
+    const cachedSummary = await lookupCache({ documentType: 'panchang-insights', dateStr, latitude, longitude });
 
     if (cachedSummary) {
-      log(`Cache hit for panchang ${city}, ${state} on ${dateStr}`);
+      log(`Cache hit for panchang at ${latitude},${longitude} on ${dateStr}`);
       return res.json(cachedSummary);
     }
 
@@ -40,13 +40,13 @@ export default async ({ req, res, log, error }) => {
     }
 
     try {
-      await saveCache({ documentType: 'panchang-insights', city, dateStr, latitude, longitude, state, tz, summary });
-      log(`Cached panchang summary for ${city}, ${state} on ${dateStr}`);
+      await saveCache({ documentType: 'panchang-insights', dateStr, latitude, longitude, summary });
+      log(`Cached panchang summary at ${latitude},${longitude} on ${dateStr}`);
     } catch (err) {
       error('Failed to cache panchang insights: ' + err.message);
     }
 
-    log(`Fetched panchang-insights for ${city}, ${state} on ${date}`);
+    log(`Fetched panchang-insights at ${latitude},${longitude} on ${date}`);
     return res.json(summary);
   }
 
