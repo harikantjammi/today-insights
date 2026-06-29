@@ -110,6 +110,7 @@ Rules:
 - Do not include any muhurat-related information (auspicious or inauspicious periods) in the summary or recommendations.
 - The output must cover each of tithi, vaara, nakshatra, yoga, and karana based on the input data.
 - For each component, provide "information" (states today's exact value for this component, from the input data, and gives a precise, specific explanation of its meaning and significance — this may draw on well-known general knowledge beyond the input data), a "summary" (a precise, specific account of what today's value of this component means for the day, based on the input data — avoid vague or generic statements), and "recommendations" (a list of "text"/"type" entries).
+- "information" and "summary" must each be at most 50 words. Keep them tightly focused on the single most important point — do not pad with generic or repetitive statements.
 - For each component, populate "recommendations" as thoroughly as possible: include every relevant "do", "avoid", and "warning" item that can reasonably be derived from today's value for that component. Only leave "recommendations" empty if truly nothing applicable can be said.
 - "recommendations" is mandatory for every component and must never be cut short or omitted to save space. If the response is at risk of running out of room, shorten "information" and "summary" first — never sacrifice "recommendations" content to do so.
 - Respond only with the JSON object — no markdown fences, no extra text, no commentary.`,
@@ -129,11 +130,11 @@ Rules:
                 properties: {
                   information: {
                     type: 'string',
-                    description: `States today's exact ${component} (from the input data) and gives a precise, specific explanation of its meaning and significance, drawing on well-known general knowledge beyond the input data if needed.`,
+                    description: `States today's exact ${component} (from the input data) and gives a precise, specific explanation of its meaning and significance, drawing on well-known general knowledge beyond the input data if needed. At most 50 words, tightly focused on the single most important point.`,
                   },
                   summary: {
                     type: 'string',
-                    description: `Precise, specific account of what today's ${component} means for the day, based on the input data. Avoid vague or generic statements.`,
+                    description: `Precise, specific account of what today's ${component} means for the day, based on the input data. Avoid vague or generic statements. At most 50 words, tightly focused on the single most important point.`,
                   },
                   recommendations: {
                     type: 'array',
